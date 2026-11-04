@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ordine confermato | Voltaria</title>
+  <meta name="description" content="Conferma ordine dimostrativa con evento purchase e ID transazione casuale.">
+  <!-- Sito dimostrativo: chiedo ai motori di ricerca di non indicizzarlo. -->
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- 1) Il dataLayer deve esistere PRIMA di Google Tag Manager, così il
+          contenitore trova subito gli eventi già presenti nella pagina. -->
+  <script>window.dataLayer = window.dataLayer || [];</script>
+
+  <!-- 2) SPAZIO PER IL CONSENT MODE (da configurare in un secondo momento)
+          Qui andrà il blocco gtag('consent', 'default', {...}) con i valori
+          "denied", prima dello snippet GTM. Il banner cookie vero e proprio
+          va nel contenitore <div id="cookie-banner-slot"> in fondo al body. -->
+
+  <!-- 3) Google Tag Manager – sostituire GTM-XXXXXXX con l'ID del contenitore.
+          GA4 NON è installato a mano: ogni tag viene creato dentro GTM. -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
+  <!-- Fine Google Tag Manager -->
+</head>
+<body>
+
+<!-- Google Tag Manager (noscript) – sostituire GTM-XXXXXXX -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- Fine Google Tag Manager (noscript) -->
+
+<div class="demo-banner" role="note">
+  <strong>Negozio dimostrativo</strong> &ndash; progetto portfolio, nessun prodotto &egrave; in vendita
+</div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="logo" href="index.html">
+      <span class="logo__mark" aria-hidden="true">V</span>
+      Voltaria
+    </a>
+    <nav class="site-nav" aria-label="Navigazione principale">
+      <a href="index.html">Home</a>
+      <a href="categoria.html">Catalogo</a>
+      <a href="carrello.html">Carrello<span class="cart-badge" data-cart-count hidden>0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div id="esito"></div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>Voltaria</strong> &egrave; un marchio di fantasia creato per un progetto portfolio di web analytics.</p>
+    <p>Nessun prodotto, prezzo o pagamento di questo sito &egrave; reale. Nessun dato personale viene raccolto o inviato.</p>
+    <p class="small">&copy; <span id="year">2026</span> Voltaria &ndash; progetto dimostrativo di tracciamento GA4 e Google Tag Manager.</p>
+  </div>
+</footer>
+
+<!-- SPAZIO RISERVATO AL BANNER COOKIE
+     Da riempire quando configureremo il Consent Mode: pulsanti Accetta /
+     Rifiuta / Personalizza che aggiorneranno gtag('consent', 'update', ...).
+     Lasciato vuoto di proposito: finch&eacute; &egrave; vuoto non si vede. -->
+<div id="cookie-banner-slot" aria-live="polite"></div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Ordine dei file: catalogo, tracciamento, carrello, interfaccia. -->
+<script src="js/products.js"></script>
+<script src="js/datalayer.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/ui.js"></script>
+
+<script>
+/* ----- Logica della conferma ordine -------------------------------------
+   Legge l'ordine finto salvato dalla cassa, invia purchase e svuota il
+   carrello. Il controllo Order.alreadyTracked evita il doppio invio se la
+   pagina viene ricaricata o aperta di nuovo: in GA4 due purchase con lo
+   stesso transaction_id falserebbero le entrate.
+   --------------------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', function () {
+  var esito = document.getElementById('esito');
+  var ordine = Order.read();
+
+  /* Nessun ordine salvato: pagina aperta direttamente. */
+  if (!ordine || !ordine.rows || ordine.rows.length === 0) {
+    esito.innerHTML = '<div class="panel empty">' +
+      '<h1>Nessun ordine da mostrare</h1>' +
+      '<p class="muted">Questa pagina si apre al termine della cassa dimostrativa.</p>' +
+      '<p><a class="btn" href="categoria.html">Vai al catalogo</a></p>' +
+      '</div>';
+    return;
+  }
+
+  /* Ricostruisco le righe dal catalogo: nel browser sono salvati solo
+     codice articolo e quantità. */
+  var righe = ordine.rows
+    .map(function (row) {
+      var prodotto = getProductById(row.id);
+      return prodotto ? { product: prodotto, quantity: row.quantity } : null;
+    })
+    .filter(function (riga) { return riga !== null; });
+
+  esito.innerHTML = '' +
+    '<div class="panel" style="text-align:center">' +
+      '<div class="confirm-badge" aria-hidden="true">&#10003;</div>' +
+      '<h1>Ordine dimostrativo confermato</h1>' +
+      '<p class="muted">Nessun pagamento &egrave; stato elaborato e nessuna merce verr&agrave; spedita.<br>' +
+         'L\'ID transazione qui sotto &egrave; generato a caso solo per il tracciamento.</p>' +
+      '<p><span class="transaction-id">' + ordine.transactionId + '</span></p>' +
+    '</div>' +
+
+    '<div class="cart-layout" style="margin-top:1.75rem">' +
+      '<div class="panel">' +
+        '<h2>Prodotti ordinati</h2>' +
+        righe.map(function (riga) {
+          return '<div class="cart-line">' +
+            '<div class="cart-line__media" aria-hidden="true">' + riga.product.glyph + '</div>' +
+            '<div><div class="cart-line__name">' + riga.product.brand + ' ' + riga.product.name + '</div>' +
+            '<div class="cart-line__meta">' + riga.product.id + ' &middot; quantit&agrave; ' + riga.quantity + '</div></div>' +
+            '<div class="cart-line__right"><strong>' + formatPrice(riga.product.price * riga.quantity) + '</strong></div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<aside class="panel">' +
+        '<h2>Totali</h2>' +
+        '<ul class="totals">' +
+          '<li><span>Totale prodotti</span><span>' + formatPrice(ordine.subtotal) + '</span></li>' +
+          '<li><span>Spedizione (' + ordine.shippingTier + ')</span><span>' + (ordine.shipping === 0 ? 'Gratis' : formatPrice(ordine.shipping)) + '</span></li>' +
+          '<li><span>di cui IVA 22%</span><span>' + formatPrice(ordine.tax) + '</span></li>' +
+          '<li class="is-total"><span>Totale</span><span>' + formatPrice(ordine.total) + '</span></li>' +
+        '</ul>' +
+        '<p class="small muted">Pagamento: ' + ordine.paymentType + ' (dimostrativo)</p>' +
+        '<a class="btn" style="width:100%" href="categoria.html">Torna al catalogo</a>' +
+      '</aside>' +
+    '</div>';
+
+  /* Evento di acquisto: una volta sola per ogni ID transazione. */
+  if (!Order.alreadyTracked(ordine.transactionId)) {
+    DL.purchase({
+      transactionId: ordine.transactionId,
+      lines: righe,
+      total: ordine.total,
+      tax: ordine.tax,
+      shipping: ordine.shipping
+    });
+    Order.markTracked(ordine.transactionId);
+    Cart.clear();
+  }
+});
+</script>
+
+</body>
+</html>

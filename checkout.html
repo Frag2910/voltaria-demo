@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cassa dimostrativa | Voltaria</title>
+  <meta name="description" content="Cassa dimostrativa in 3 passaggi con eventi begin_checkout, add_shipping_info e add_payment_info.">
+  <!-- Sito dimostrativo: chiedo ai motori di ricerca di non indicizzarlo. -->
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- 1) Il dataLayer deve esistere PRIMA di Google Tag Manager, così il
+          contenitore trova subito gli eventi già presenti nella pagina. -->
+  <script>window.dataLayer = window.dataLayer || [];</script>
+
+  <!-- 2) SPAZIO PER IL CONSENT MODE (da configurare in un secondo momento)
+          Qui andrà il blocco gtag('consent', 'default', {...}) con i valori
+          "denied", prima dello snippet GTM. Il banner cookie vero e proprio
+          va nel contenitore <div id="cookie-banner-slot"> in fondo al body. -->
+
+  <!-- 3) Google Tag Manager – sostituire GTM-XXXXXXX con l'ID del contenitore.
+          GA4 NON è installato a mano: ogni tag viene creato dentro GTM. -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
+  <!-- Fine Google Tag Manager -->
+</head>
+<body>
+
+<!-- Google Tag Manager (noscript) – sostituire GTM-XXXXXXX -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- Fine Google Tag Manager (noscript) -->
+
+<div class="demo-banner" role="note">
+  <strong>Negozio dimostrativo</strong> &ndash; progetto portfolio, nessun prodotto &egrave; in vendita
+</div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="logo" href="index.html">
+      <span class="logo__mark" aria-hidden="true">V</span>
+      Voltaria
+    </a>
+    <nav class="site-nav" aria-label="Navigazione principale">
+      <a href="index.html">Home</a>
+      <a href="categoria.html">Catalogo</a>
+      <a href="carrello.html">Carrello<span class="cart-badge" data-cart-count hidden>0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="breadcrumb"><a href="carrello.html">Carrello</a> &rsaquo; Cassa</p>
+    <h1>Cassa dimostrativa</h1>
+
+    <div class="notice">
+      <strong>Nessun dato reale.</strong> I campi sono precompilati con dati di esempio e non
+      modificabili, non esiste alcun invio al server e nessun pagamento viene elaborato.
+      Puoi scegliere liberamente spedizione e pagamento: servono solo a riempire i parametri
+      <code>shipping_tier</code> e <code>payment_type</code> degli eventi GA4.
+    </div>
+
+    <ol class="steps" id="passaggi">
+      <li class="is-active" data-passo="1"><span>1</span>Spedizione</li>
+      <li data-passo="2"><span>2</span>Pagamento</li>
+      <li data-passo="3"><span>3</span>Riepilogo</li>
+    </ol>
+
+    <div class="cart-layout">
+      <div id="pannello"></div>
+      <aside class="panel">
+        <h2>Riepilogo</h2>
+        <ul class="totals" id="totali"></ul>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>Voltaria</strong> &egrave; un marchio di fantasia creato per un progetto portfolio di web analytics.</p>
+    <p>Nessun prodotto, prezzo o pagamento di questo sito &egrave; reale. Nessun dato personale viene raccolto o inviato.</p>
+    <p class="small">&copy; <span id="year">2026</span> Voltaria &ndash; progetto dimostrativo di tracciamento GA4 e Google Tag Manager.</p>
+  </div>
+</footer>
+
+<!-- SPAZIO RISERVATO AL BANNER COOKIE
+     Da riempire quando configureremo il Consent Mode: pulsanti Accetta /
+     Rifiuta / Personalizza che aggiorneranno gtag('consent', 'update', ...).
+     Lasciato vuoto di proposito: finch&eacute; &egrave; vuoto non si vede. -->
+<div id="cookie-banner-slot" aria-live="polite"></div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Ordine dei file: catalogo, tracciamento, carrello, interfaccia. -->
+<script src="js/products.js"></script>
+<script src="js/datalayer.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/ui.js"></script>
+
+<script>
+/* ----- Logica della cassa a 3 passaggi ----------------------------------
+   Un'unica pagina con tre schermate. Gli eventi partono nel momento in cui
+   il passaggio viene COMPLETATO, non quando viene mostrato:
+     caricamento pagina      -> begin_checkout
+     passaggio 1 completato  -> add_shipping_info (con shipping_tier)
+     passaggio 2 completato  -> add_payment_info  (con payment_type)
+   Il passaggio 3 non ha un evento proprio: la conferma genera purchase
+   nella pagina conferma.html.
+   --------------------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', function () {
+  var pannello = document.getElementById('pannello');
+  var totali = document.getElementById('totali');
+  var passaggi = document.getElementById('passaggi');
+
+  /* Carrello vuoto: non ha senso tracciare un checkout. */
+  if (Cart.isEmpty()) {
+    pannello.innerHTML = '<div class="panel empty">' +
+      '<h2>Carrello vuoto</h2>' +
+      '<p class="muted">Aggiungi un prodotto dimostrativo prima di passare alla cassa.</p>' +
+      '<p><a class="btn" href="categoria.html">Vai al catalogo</a></p>' +
+      '</div>';
+    totali.innerHTML = '';
+    return;
+  }
+
+  /* Stato della cassa: scelte fatte finora. */
+  var stato = {
+    passo: 1,
+    spedizione: SHIPPING_OPTIONS[0],
+    pagamento: PAYMENT_OPTIONS[0]
+  };
+
+  /* Dati di esempio, non modificabili: nessun dato personale vero. */
+  var DATI_ESEMPIO = {
+    nome: 'Mario Esempio',
+    email: 'cliente@esempio.test',
+    indirizzo: 'Via della Dimostrazione 1',
+    cap: '42121',
+    citta: 'Reggio Emilia',
+    paese: 'Italia',
+    carta: '0000 0000 0000 0000 (dimostrativa)',
+    scadenza: '12/30',
+    intestatario: 'Mario Esempio'
+  };
+
+  function aggiornaTotali() {
+    var t = Order.totals(stato.spedizione.cost);
+    totali.innerHTML = '' +
+      '<li><span>Totale prodotti</span><span>' + formatPrice(t.subtotal) + '</span></li>' +
+      '<li><span>Spedizione (' + stato.spedizione.tier + ')</span><span>' + (t.shipping === 0 ? 'Gratis' : formatPrice(t.shipping)) + '</span></li>' +
+      '<li><span>di cui IVA 22%</span><span>' + formatPrice(t.tax) + '</span></li>' +
+      '<li class="is-total"><span>Totale</span><span>' + formatPrice(t.total) + '</span></li>';
+  }
+
+  function aggiornaIndicatore() {
+    var voci = passaggi.querySelectorAll('[data-passo]');
+    for (var i = 0; i < voci.length; i++) {
+      var n = parseInt(voci[i].getAttribute('data-passo'), 10);
+      voci[i].className = n === stato.passo ? 'is-active' : (n < stato.passo ? 'is-done' : '');
+    }
+  }
+
+  /* Campo di testo bloccato, con etichetta. */
+  function campo(etichetta, valore) {
+    return '<div class="field"><label>' + etichetta + '</label>' +
+      '<input type="text" value="' + valore + '" readonly tabindex="-1" autocomplete="off"></div>';
+  }
+
+  function schermataSpedizione() {
+    return '<div class="panel">' +
+      '<h2>1. Indirizzo e spedizione</h2>' +
+      campo('Nome e cognome', DATI_ESEMPIO.nome) +
+      campo('Email', DATI_ESEMPIO.email) +
+      campo('Indirizzo', DATI_ESEMPIO.indirizzo) +
+      '<div class="field-row">' + campo('CAP', DATI_ESEMPIO.cap) + campo('Citt&agrave;', DATI_ESEMPIO.citta) + '</div>' +
+      campo('Paese', DATI_ESEMPIO.paese) +
+      '<h3 style="margin-top:1.5rem">Metodo di spedizione</h3>' +
+      SHIPPING_OPTIONS.map(function (opzione, i) {
+        return '<label class="choice">' +
+          '<input type="radio" name="spedizione" value="' + i + '"' + (opzione.tier === stato.spedizione.tier ? ' checked' : '') + '>' +
+          '<span class="choice__label">' + opzione.label + '</span>' +
+          '<span class="choice__cost">' + (opzione.cost === 0 ? 'Gratis' : formatPrice(opzione.cost)) + '</span>' +
+        '</label>';
+      }).join('') +
+      '<div class="actions">' +
+        '<button type="button" class="btn" data-avanti="2">Continua al pagamento</button>' +
+        '<a class="btn btn--ghost" href="carrello.html">Torna al carrello</a>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function schermataPagamento() {
+    return '<div class="panel">' +
+      '<h2>2. Pagamento</h2>' +
+      '<p class="small muted">Dati di pagamento finti e bloccati: non esiste nessuna transazione reale.</p>' +
+      PAYMENT_OPTIONS.map(function (opzione, i) {
+        return '<label class="choice">' +
+          '<input type="radio" name="pagamento" value="' + i + '"' + (opzione.type === stato.pagamento.type ? ' checked' : '') + '>' +
+          '<span class="choice__label">' + opzione.label + '</span>' +
+        '</label>';
+      }).join('') +
+      '<div style="margin-top:1.25rem">' +
+        campo('Numero carta (dimostrativo)', DATI_ESEMPIO.carta) +
+        '<div class="field-row">' + campo('Scadenza', DATI_ESEMPIO.scadenza) + campo('Intestatario', DATI_ESEMPIO.intestatario) + '</div>' +
+      '</div>' +
+      '<div class="actions">' +
+        '<button type="button" class="btn" data-avanti="3">Continua al riepilogo</button>' +
+        '<button type="button" class="btn btn--ghost" data-indietro="1">Indietro</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function schermataRiepilogo() {
+    var righe = Cart.lines();
+    var t = Order.totals(stato.spedizione.cost);
+    return '<div class="panel">' +
+      '<h2>3. Riepilogo ordine</h2>' +
+      righe.map(function (riga) {
+        return '<div class="cart-line">' +
+          '<div class="cart-line__media" aria-hidden="true">' + riga.product.glyph + '</div>' +
+          '<div><div class="cart-line__name">' + riga.product.brand + ' ' + riga.product.name + '</div>' +
+          '<div class="cart-line__meta">Quantit&agrave;: ' + riga.quantity + '</div></div>' +
+          '<div class="cart-line__right"><strong>' + formatPrice(riga.product.price * riga.quantity) + '</strong></div>' +
+        '</div>';
+      }).join('') +
+      '<ul class="totals" style="margin-top:1.25rem">' +
+        '<li><span>Spedizione scelta</span><span>' + stato.spedizione.tier + '</span></li>' +
+        '<li><span>Pagamento scelto</span><span>' + stato.pagamento.type + '</span></li>' +
+        '<li><span>Indirizzo</span><span>' + DATI_ESEMPIO.indirizzo + ', ' + DATI_ESEMPIO.citta + '</span></li>' +
+        '<li class="is-total"><span>Totale da pagare</span><span>' + formatPrice(t.total) + '</span></li>' +
+      '</ul>' +
+      '<div class="actions">' +
+        '<button type="button" class="btn" id="conferma">Concludi ordine dimostrativo</button>' +
+        '<button type="button" class="btn btn--ghost" data-indietro="2">Indietro</button>' +
+      '</div>' +
+      '<p class="small muted" style="margin-top:1rem">Premendo il pulsante non parte nessun pagamento: viene solo generato un ID transazione casuale.</p>' +
+    '</div>';
+  }
+
+  function disegna() {
+    if (stato.passo === 1) pannello.innerHTML = schermataSpedizione();
+    if (stato.passo === 2) pannello.innerHTML = schermataPagamento();
+    if (stato.passo === 3) pannello.innerHTML = schermataRiepilogo();
+    aggiornaIndicatore();
+    aggiornaTotali();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* Legge la scelta selezionata prima di passare al passaggio successivo. */
+  function leggiScelte() {
+    var sped = pannello.querySelector('input[name="spedizione"]:checked');
+    if (sped) stato.spedizione = SHIPPING_OPTIONS[parseInt(sped.value, 10)];
+    var pag = pannello.querySelector('input[name="pagamento"]:checked');
+    if (pag) stato.pagamento = PAYMENT_OPTIONS[parseInt(pag.value, 10)];
+  }
+
+  pannello.addEventListener('click', function (event) {
+    var avanti = event.target.closest('[data-avanti]');
+    var indietro = event.target.closest('[data-indietro]');
+
+    if (avanti) {
+      leggiScelte();
+      var prossimo = parseInt(avanti.getAttribute('data-avanti'), 10);
+
+      /* Passaggio 1 completato -> metodo di spedizione scelto. */
+      if (prossimo === 2) DL.addShippingInfo(Cart.lines(), stato.spedizione.tier);
+      /* Passaggio 2 completato -> metodo di pagamento scelto. */
+      if (prossimo === 3) DL.addPaymentInfo(Cart.lines(), stato.pagamento.type);
+
+      stato.passo = prossimo;
+      disegna();
+      return;
+    }
+
+    if (indietro) {
+      /* Tornando indietro non si inviano eventi: il percorso è già registrato. */
+      stato.passo = parseInt(indietro.getAttribute('data-indietro'), 10);
+      disegna();
+      return;
+    }
+
+    if (event.target.id === 'conferma') {
+      var t = Order.totals(stato.spedizione.cost);
+      /* Salvo l'ordine finto: la pagina di conferma lo legge e invia purchase. */
+      Order.save({
+        transactionId: Order.newTransactionId(),
+        rows: Cart.lines().map(function (riga) {
+          return { id: riga.product.id, quantity: riga.quantity };
+        }),
+        shippingTier: stato.spedizione.tier,
+        paymentType: stato.pagamento.type,
+        subtotal: t.subtotal,
+        shipping: t.shipping,
+        tax: t.tax,
+        total: t.total
+      });
+      window.location.href = 'conferma.html';
+    }
+  });
+
+  /* Primo passaggio mostrato -> inizio del checkout. */
+  disegna();
+  DL.beginCheckout(Cart.lines());
+});
+</script>
+
+</body>
+</html>

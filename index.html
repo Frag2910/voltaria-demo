@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elettronica di fantasia | Voltaria</title>
+  <meta name="description" content="Negozio dimostrativo Voltaria: progetto portfolio di tracciamento GA4 e Google Tag Manager.">
+  <!-- Sito dimostrativo: chiedo ai motori di ricerca di non indicizzarlo. -->
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- 1) Il dataLayer deve esistere PRIMA di Google Tag Manager, così il
+          contenitore trova subito gli eventi già presenti nella pagina. -->
+  <script>window.dataLayer = window.dataLayer || [];</script>
+
+  <!-- 2) SPAZIO PER IL CONSENT MODE (da configurare in un secondo momento)
+          Qui andrà il blocco gtag('consent', 'default', {...}) con i valori
+          "denied", prima dello snippet GTM. Il banner cookie vero e proprio
+          va nel contenitore <div id="cookie-banner-slot"> in fondo al body. -->
+
+  <!-- 3) Google Tag Manager – sostituire GTM-XXXXXXX con l'ID del contenitore.
+          GA4 NON è installato a mano: ogni tag viene creato dentro GTM. -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
+  <!-- Fine Google Tag Manager -->
+</head>
+<body>
+
+<!-- Google Tag Manager (noscript) – sostituire GTM-XXXXXXX -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- Fine Google Tag Manager (noscript) -->
+
+<div class="demo-banner" role="note">
+  <strong>Negozio dimostrativo</strong> &ndash; progetto portfolio, nessun prodotto &egrave; in vendita
+</div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="logo" href="index.html">
+      <span class="logo__mark" aria-hidden="true">V</span>
+      Voltaria
+    </a>
+    <nav class="site-nav" aria-label="Navigazione principale">
+      <a href="index.html">Home</a>
+      <a href="categoria.html">Catalogo</a>
+      <a href="carrello.html">Carrello<span class="cart-badge" data-cart-count hidden>0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <section class="hero">
+      <h1>Tecnologia che non esiste, tracciamento che funziona</h1>
+      <p>Voltaria &egrave; un negozio inventato da zero per mostrare un impianto di misurazione
+         completo: dataLayer secondo le specifiche GA4 Ecommerce e Google Tag Manager.</p>
+      <p><a class="btn btn--light" href="categoria.html">Vedi il catalogo</a></p>
+    </section>
+
+    <section class="section">
+      <div class="section__head">
+        <h2>In vetrina</h2>
+        <a href="categoria.html">Tutti i prodotti &rarr;</a>
+      </div>
+      <!-- Elenco tracciato come view_item_list con lista "Vetrina home" -->
+      <div class="grid" id="vetrina"></div>
+    </section>
+
+    <section class="section panel">
+      <h2>Cosa dimostra questo progetto</h2>
+      <p class="muted">Ogni passaggio del percorso di acquisto invia al dataLayer l'evento
+         previsto dalle specifiche ufficiali dell'e-commerce GA4, sempre preceduto
+         da <code>ecommerce: null</code> per non mescolare i dati tra una pagina e l'altra.</p>
+      <p class="small muted">Eventi coperti: view_item_list, select_item, view_item, add_to_cart,
+         remove_from_cart, view_cart, begin_checkout, add_shipping_info, add_payment_info, purchase.</p>
+      <p class="small muted">Per vedere i push nella console del browser: apri gli strumenti
+         per sviluppatori e scrivi <code>VOLTARIA_DEBUG = true</code>, poi naviga nel sito.</p>
+    </section>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>Voltaria</strong> &egrave; un marchio di fantasia creato per un progetto portfolio di web analytics.</p>
+    <p>Nessun prodotto, prezzo o pagamento di questo sito &egrave; reale. Nessun dato personale viene raccolto o inviato.</p>
+    <p class="small">&copy; <span id="year">2026</span> Voltaria &ndash; progetto dimostrativo di tracciamento GA4 e Google Tag Manager.</p>
+  </div>
+</footer>
+
+<!-- SPAZIO RISERVATO AL BANNER COOKIE
+     Da riempire quando configureremo il Consent Mode: pulsanti Accetta /
+     Rifiuta / Personalizza che aggiorneranno gtag('consent', 'update', ...).
+     Lasciato vuoto di proposito: finch&eacute; &egrave; vuoto non si vede. -->
+<div id="cookie-banner-slot" aria-live="polite"></div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Ordine dei file: catalogo, tracciamento, carrello, interfaccia. -->
+<script src="js/products.js"></script>
+<script src="js/datalayer.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/ui.js"></script>
+
+<script>
+/* ----- Logica della home -----------------------------------------------
+   Mostra i primi 4 prodotti del catalogo come vetrina e dichiara l'elenco
+   a GA4 con view_item_list. I clic sui prodotti (select_item) e i pulsanti
+   "Aggiungi al carrello" (add_to_cart) li collega renderProductList().
+   --------------------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', function () {
+  var LIST_ID = 'home_vetrina';
+  var LIST_NAME = 'Vetrina home';
+  var vetrina = PRODUCTS.slice(0, 4);
+
+  renderProductList(document.getElementById('vetrina'), vetrina, LIST_ID, LIST_NAME);
+  DL.viewItemList(LIST_ID, LIST_NAME, vetrina);
+});
+</script>
+
+</body>
+</html>

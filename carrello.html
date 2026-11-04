@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carrello | Voltaria</title>
+  <meta name="description" content="Carrello dimostrativo Voltaria salvato nel browser, con eventi view_cart e remove_from_cart.">
+  <!-- Sito dimostrativo: chiedo ai motori di ricerca di non indicizzarlo. -->
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- 1) Il dataLayer deve esistere PRIMA di Google Tag Manager, così il
+          contenitore trova subito gli eventi già presenti nella pagina. -->
+  <script>window.dataLayer = window.dataLayer || [];</script>
+
+  <!-- 2) SPAZIO PER IL CONSENT MODE (da configurare in un secondo momento)
+          Qui andrà il blocco gtag('consent', 'default', {...}) con i valori
+          "denied", prima dello snippet GTM. Il banner cookie vero e proprio
+          va nel contenitore <div id="cookie-banner-slot"> in fondo al body. -->
+
+  <!-- 3) Google Tag Manager – sostituire GTM-XXXXXXX con l'ID del contenitore.
+          GA4 NON è installato a mano: ogni tag viene creato dentro GTM. -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
+  <!-- Fine Google Tag Manager -->
+</head>
+<body>
+
+<!-- Google Tag Manager (noscript) – sostituire GTM-XXXXXXX -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- Fine Google Tag Manager (noscript) -->
+
+<div class="demo-banner" role="note">
+  <strong>Negozio dimostrativo</strong> &ndash; progetto portfolio, nessun prodotto &egrave; in vendita
+</div>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="logo" href="index.html">
+      <span class="logo__mark" aria-hidden="true">V</span>
+      Voltaria
+    </a>
+    <nav class="site-nav" aria-label="Navigazione principale">
+      <a href="index.html">Home</a>
+      <a href="categoria.html">Catalogo</a>
+      <a href="carrello.html">Carrello<span class="cart-badge" data-cart-count hidden>0</span></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="breadcrumb"><a href="index.html">Home</a> &rsaquo; Carrello</p>
+    <h1>Il tuo carrello</h1>
+    <p class="muted">Il contenuto resta salvato solo nel tuo browser (localStorage): non viene inviato a nessun server.</p>
+    <div id="contenuto"></div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>Voltaria</strong> &egrave; un marchio di fantasia creato per un progetto portfolio di web analytics.</p>
+    <p>Nessun prodotto, prezzo o pagamento di questo sito &egrave; reale. Nessun dato personale viene raccolto o inviato.</p>
+    <p class="small">&copy; <span id="year">2026</span> Voltaria &ndash; progetto dimostrativo di tracciamento GA4 e Google Tag Manager.</p>
+  </div>
+</footer>
+
+<!-- SPAZIO RISERVATO AL BANNER COOKIE
+     Da riempire quando configureremo il Consent Mode: pulsanti Accetta /
+     Rifiuta / Personalizza che aggiorneranno gtag('consent', 'update', ...).
+     Lasciato vuoto di proposito: finch&eacute; &egrave; vuoto non si vede. -->
+<div id="cookie-banner-slot" aria-live="polite"></div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Ordine dei file: catalogo, tracciamento, carrello, interfaccia. -->
+<script src="js/products.js"></script>
+<script src="js/datalayer.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/ui.js"></script>
+
+<script>
+/* ----- Logica del carrello ----------------------------------------------
+   view_cart parte una volta sola al caricamento, con tutte le righe.
+   Cambiando la quantità invio l'evento sulla DIFFERENZA, non sul totale:
+   da 1 a 3 pezzi -> add_to_cart con quantity 2;
+   da 3 a 1 pezzo -> remove_from_cart con quantity 2.
+   È il modo corretto per non gonfiare i valori nei report GA4.
+   --------------------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', function () {
+  var contenuto = document.getElementById('contenuto');
+
+  function disegna() {
+    var righe = Cart.lines();
+
+    if (righe.length === 0) {
+      contenuto.innerHTML = '<div class="panel empty">' +
+        '<h2>Il carrello &egrave; vuoto</h2>' +
+        '<p class="muted">Aggiungi qualche prodotto dimostrativo per provare il percorso di acquisto.</p>' +
+        '<p><a class="btn" href="categoria.html">Vai al catalogo</a></p>' +
+        '</div>';
+      return;
+    }
+
+    var totali = Order.totals(0);
+
+    contenuto.innerHTML = '' +
+      '<div class="cart-layout">' +
+        '<div class="panel" id="righe">' +
+          righe.map(function (riga) {
+            return '' +
+              '<div class="cart-line" data-id="' + riga.product.id + '">' +
+                '<div class="cart-line__media" aria-hidden="true">' + riga.product.glyph + '</div>' +
+                '<div>' +
+                  '<div class="cart-line__name">' + riga.product.brand + ' ' + riga.product.name + '</div>' +
+                  '<div class="cart-line__meta">' + riga.product.category + ' &middot; ' + riga.product.variant + '</div>' +
+                  '<div class="cart-line__meta">' + formatPrice(riga.product.price) + ' al pezzo</div>' +
+                '</div>' +
+                '<div class="cart-line__right">' +
+                  '<input type="number" min="0" max="10" value="' + riga.quantity + '" data-quantita aria-label="Quantit&agrave; per ' + riga.product.name + '">' +
+                  '<strong>' + formatPrice(riga.product.price * riga.quantity) + '</strong>' +
+                  '<button type="button" class="link-quiet" data-rimuovi>Rimuovi</button>' +
+                '</div>' +
+              '</div>';
+          }).join('') +
+        '</div>' +
+        '<aside class="panel">' +
+          '<h2>Riepilogo</h2>' +
+          '<ul class="totals">' +
+            '<li><span>Totale prodotti</span><span>' + formatPrice(totali.subtotal) + '</span></li>' +
+            '<li><span>Spedizione</span><span class="muted">calcolata al passaggio 1</span></li>' +
+            '<li><span>di cui IVA 22%</span><span>' + formatPrice(totali.tax) + '</span></li>' +
+            '<li class="is-total"><span>Totale</span><span>' + formatPrice(totali.total) + '</span></li>' +
+          '</ul>' +
+          '<a class="btn" style="width:100%" href="checkout.html">Vai alla cassa</a>' +
+          '<p class="small muted" style="margin-top:1rem">Cassa dimostrativa: nessun dato reale, nessun pagamento.</p>' +
+        '</aside>' +
+      '</div>';
+  }
+
+  /* Un solo gestore per tutta l'area: funziona anche dopo aver ridisegnato. */
+  contenuto.addEventListener('change', function (event) {
+    if (!event.target.matches('[data-quantita]')) return;
+    var linea = event.target.closest('[data-id]');
+    var prodotto = getProductById(linea.getAttribute('data-id'));
+    if (!prodotto) return;
+
+    var precedente = Cart.lines().filter(function (r) { return r.product.id === prodotto.id; })[0];
+    var vecchia = precedente ? precedente.quantity : 0;
+    var nuova = Math.max(0, Math.min(10, parseInt(event.target.value, 10) || 0));
+
+    if (nuova > vecchia) DL.addToCart(prodotto, nuova - vecchia);
+    if (nuova < vecchia) DL.removeFromCart(prodotto, vecchia - nuova);
+
+    Cart.setQuantity(prodotto.id, nuova);
+    disegna();
+  });
+
+  contenuto.addEventListener('click', function (event) {
+    if (!event.target.closest('[data-rimuovi]')) return;
+    var linea = event.target.closest('[data-id]');
+    var prodotto = getProductById(linea.getAttribute('data-id'));
+    if (!prodotto) return;
+
+    var riga = Cart.lines().filter(function (r) { return r.product.id === prodotto.id; })[0];
+    /* Rimozione completa: l'evento riporta tutta la quantità che c'era. */
+    DL.removeFromCart(prodotto, riga ? riga.quantity : 1);
+    Cart.remove(prodotto.id);
+    showToast(prodotto.name + ' rimosso dal carrello');
+    disegna();
+  });
+
+  disegna();
+
+  /* view_cart solo se c'è davvero qualcosa da mostrare. */
+  var iniziali = Cart.lines();
+  if (iniziali.length > 0) DL.viewCart(iniziali);
+});
+</script>
+
+</body>
+</html>
