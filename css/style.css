@@ -66,9 +66,11 @@ body { padding-top: 44px; }
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   position: sticky;
-  top: 0;
+  /* Si ferma sotto il banner dimostrativo, non dietro. */
+  top: 44px;
   z-index: 90;
 }
+@media (max-width: 560px) { .site-header { top: 64px; } }
 .site-header__inner {
   display: flex;
   align-items: center;
