@@ -18,7 +18,7 @@ tramite **Google Tag Manager**.
 | Sito, catalogo, carrello, checkout | sviluppo | completato |
 | `dataLayer` secondo le specifiche GA4 Ecommerce | sviluppo | completato |
 | Contenitore GTM: variabili, trigger, tag GA4 | analista | da configurare |
-| Banner cookie + Consent Mode | analista | spazio predisposto |
+| Banner cookie + Consent Mode v2 | sviluppo | completato |
 
 GA4 **non** è installato nel codice: nelle pagine c'è solo lo snippet di Google Tag Manager
 con l'ID del contenitore `GTM-K27GBKKM`. Ogni tag va creato dentro il contenitore.
@@ -45,7 +45,8 @@ Il carrello vive nel `localStorage` del browser.
     ├── products.js   Catalogo: 8 prodotti di fantasia
     ├── datalayer.js  UNICO file che scrive nel dataLayer (tutti gli eventi GA4)
     ├── cart.js       Carrello in localStorage, totali, IVA, ID transazione
-    └── ui.js         Funzioni comuni dell'interfaccia
+    ├── ui.js         Funzioni comuni dell'interfaccia
+    └── consent.js    Banner cookie e Consent Mode v2
 ```
 
 La logica specifica di ogni pagina sta in un blocco `<script>` in fondo alla pagina stessa,
@@ -117,6 +118,7 @@ ne sono. I parametri stanno al primo livello del push, non dentro un oggetto ann
 | Evento | Dove parte | Quando | Parametri |
 |---|---|---|---|
 | `cta_click` | `index.html` | clic sul pulsante "Vedi il catalogo" nell'intestazione | `cta_text`, `cta_location` |
+| `consent_update` | tutte | l'utente accetta o rifiuta nel banner cookie | `consent_analytics` (`granted` / `denied`) |
 
 ```js
 dataLayer.push({
@@ -175,15 +177,82 @@ Due dettagli di attuazione:
 Per vedere i push nella console del browser: apri gli strumenti per sviluppatori, scrivi
 `VOLTARIA_DEBUG = true` e naviga nel sito. Oppure scrivi `dataLayer` per vedere l'array.
 
-## Spazio per il banner cookie (Consent Mode)
+## Consenso (Consent Mode v2)
 
-Predisposto, da riempire in un secondo momento:
+### Stato di partenza
 
-- nel `<head>` di ogni pagina, un commento segna il punto dove va il blocco
-  `gtag('consent', 'default', { ... 'denied' })`, **prima** dello snippet GTM;
-- in fondo al `<body>`, il contenitore `<div id="cookie-banner-slot">` è vuoto e invisibile:
-  lì andranno i pulsanti Accetta / Rifiuta / Personalizza, collegati a
-  `gtag('consent', 'update', ...)`.
+Nel `<head>` di ogni pagina, **prima dello snippet GTM**, tutte le categorie partono negate:
+
+```js
+function gtag() { dataLayer.push(arguments); }
+
+gtag('consent', 'default', {
+  ad_storage: 'denied',
+  ad_user_data: 'denied',
+  ad_personalization: 'denied',
+  analytics_storage: 'denied',
+  wait_for_update: 500
+});
+```
+
+L'ordine non è un dettaglio: se il default arrivasse dopo lo snippet, i tag partirebbero
+prima di sapere cosa è permesso. Finché l'utente non sceglie, GA4 non scrive cookie e
+invia solo ping anonimi senza identificatori (*consent mode* di base).
+
+`wait_for_update: 500` dice ai tag di attendere mezzo secondo un'eventuale risposta del
+banner prima di partire. Senza questa attesa, il primo `page_view` partirebbe come negato
+anche quando l'utente accetta subito, e quella visita risulterebbe non consentita.
+
+### Cosa fa la scelta dell'utente
+
+| Azione | Effetto |
+|---|---|
+| **Accetta statistici** | `gtag('consent', 'update', { analytics_storage: 'granted' })` |
+| **Rifiuta** | `gtag('consent', 'update', { analytics_storage: 'denied' })` |
+
+Le tre voci pubblicitarie (`ad_storage`, `ad_user_data`, `ad_personalization`) restano
+**sempre negate** e non vengono mai toccate dal banner: questo sito non fa pubblicità e non
+profila nessuno, quindi non ha motivo di chiederlo. Chiedere un consenso che non si userebbe
+è una richiesta inutile e scorretta.
+
+### Memoria della scelta
+
+Salvata nel `localStorage` alla chiave `voltaria_consent`:
+
+```json
+{ "analytics_storage": "granted", "date": "2026-11-05T16:26:48.847Z" }
+```
+
+Alle visite successive la scelta viene riapplicata **dentro il `<head>`**, prima che GTM
+carichi: così il banner non ricompare e i tag non restano in attesa. La data serve a far
+scadere il consenso e richiederlo di nuovo dopo 6-12 mesi, come previsto dalla normativa.
+
+Dal footer, il link **Preferenze cookie** riapre il banner in qualsiasi momento per
+cambiare la scelta.
+
+### Scelte di progettazione
+
+- **I due pulsanti sono identici** per dimensione, colore, peso e bordo. Nessun "Rifiuta"
+  grigio e minuscolo: un consenso ottenuto con un pulsante più invitante dell'altro non è
+  libero, e per il GDPR non è un consenso valido.
+- **Il banner non blocca niente.** È una barra in fondo alla pagina, non una finestra
+  modale: si può navigare, aggiungere al carrello e concludere l'ordine anche ignorandola.
+  Chi rifiuta non perde nessuna funzione del sito.
+- **Il consenso non può rompere il tracciamento.** L'aggiornamento sta in un `try/catch`:
+  se `gtag` non fosse disponibile, l'errore viene annotato nella console e la pagina
+  continua a funzionare.
+- **Nessuna categoria si attiva da sola**: senza scelta esplicita resta tutto negato.
+
+### Da impostare in GTM
+
+- nelle impostazioni del contenitore, abilitare la **panoramica del consenso**;
+- sul tag di configurazione GA4, impostare `analytics_storage` come consenso richiesto:
+  GTM lo metterà in attesa fino all'aggiornamento;
+- l'evento `consent_update` è disponibile come trigger, se serve far partire qualcosa nel
+  momento esatto in cui l'utente sceglie.
+
+Per controllare lo stato dalla console del browser: `Consent.leggi()` mostra la scelta
+salvata, `Consent.mostra()` riapre il banner.
 
 ---
 

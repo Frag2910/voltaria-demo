@@ -13,10 +13,38 @@
           contenitore trova subito gli eventi già presenti nella pagina. -->
   <script>window.dataLayer = window.dataLayer || [];</script>
 
-  <!-- 2) SPAZIO PER IL CONSENT MODE (da configurare in un secondo momento)
-          Qui andrà il blocco gtag('consent', 'default', {...}) con i valori
-          "denied", prima dello snippet GTM. Il banner cookie vero e proprio
-          va nel contenitore <div id="cookie-banner-slot"> in fondo al body. -->
+  <!-- 2) CONSENT MODE v2 – deve stare PRIMA dello snippet GTM, altrimenti i
+          tag partirebbero prima di sapere cosa è permesso.
+          Finché l'utente non sceglie, ogni categoria è "denied": GA4 non
+          scrive cookie e manda solo ping anonimi senza identificatori.
+          wait_for_update: 500 dice ai tag di attendere mezzo secondo una
+          eventuale risposta del banner prima di partire, così il primo
+          page_view non va perso quando il consenso arriva subito. -->
+  <script>
+    /* Forma richiesta da Google: gtag accoda gli "arguments" al dataLayer. */
+    function gtag() { dataLayer.push(arguments); }
+
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied',
+      wait_for_update: 500
+    });
+
+    /* Visite successive: se la scelta è già stata fatta la applico subito,
+       prima che GTM carichi, così i tag non restano in attesa.
+       Le voci pubblicitarie restano "denied" in ogni caso: questo sito non
+       fa pubblicità e non profila nessuno. */
+    try {
+      var consensoSalvato = JSON.parse(window.localStorage.getItem('voltaria_consent'));
+      if (consensoSalvato && consensoSalvato.analytics_storage === 'granted') {
+        gtag('consent', 'update', { analytics_storage: 'granted' });
+      }
+    } catch (e) {
+      /* localStorage non disponibile: resta tutto negato e il banner chiederà. */
+    }
+  </script>
 
   <!-- 3) Google Tag Manager – contenitore GTM-K27GBKKM.
           GA4 NON è installato a mano: ogni tag viene creato dentro GTM. -->
@@ -66,22 +94,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <p><strong>Voltaria</strong> &egrave; un marchio di fantasia creato per un progetto portfolio di web analytics.</p>
     <p>Nessun prodotto, prezzo o pagamento di questo sito &egrave; reale. Nessun dato personale viene raccolto o inviato.</p>
     <p class="small">&copy; <span id="year">2026</span> Voltaria &ndash; progetto dimostrativo di tracciamento GA4 e Google Tag Manager.</p>
+    <!-- Riapre il banner per cambiare la scelta sui cookie in qualsiasi momento. -->
+    <p class="small"><a href="#" data-cookie-preferences>Preferenze cookie</a></p>
   </div>
 </footer>
 
-<!-- SPAZIO RISERVATO AL BANNER COOKIE
-     Da riempire quando configureremo il Consent Mode: pulsanti Accetta /
-     Rifiuta / Personalizza che aggiorneranno gtag('consent', 'update', ...).
-     Lasciato vuoto di proposito: finch&eacute; &egrave; vuoto non si vede. -->
+<!-- BANNER COOKIE
+     Riempito da js/consent.js solo alla prima visita o quando si clicca
+     "Preferenze cookie". Finch&eacute; &egrave; vuoto non si vede (regola :empty nel CSS).
+     &Egrave; una barra in fondo alla pagina, non una finestra modale: non copre
+     i contenuti e non blocca mai la navigazione. -->
 <div id="cookie-banner-slot" aria-live="polite"></div>
 
 <div id="toast" role="status" aria-live="polite"></div>
 
-<!-- Ordine dei file: catalogo, tracciamento, carrello, interfaccia. -->
+<!-- Ordine dei file: catalogo, tracciamento, carrello, interfaccia, consenso.
+     consent.js viene per ultimo perché usa showToast() definito in ui.js. -->
 <script src="js/products.js"></script>
 <script src="js/datalayer.js"></script>
 <script src="js/cart.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/consent.js"></script>
 
 <script>
 /* ----- Logica del carrello ----------------------------------------------

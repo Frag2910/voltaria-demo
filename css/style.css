@@ -343,7 +343,9 @@ main { padding: 2.5rem 0 4rem; }
 #toast.is-visible { opacity: 1; transform: translateY(0); }
 
 /* --------------------------------------------------------------------------
-   Spazio riservato al banner cookie (Consent Mode, da configurare dopo)
+   Banner cookie (Consent Mode v2)
+   Barra in fondo alla pagina, non una finestra modale: non copre i contenuti
+   e non blocca la navigazione. Vuoto non si vede, grazie a :empty.
    -------------------------------------------------------------------------- */
 #cookie-banner-slot:empty { display: none; }
 #cookie-banner-slot {
@@ -354,6 +356,49 @@ main { padding: 2.5rem 0 4rem; }
   border-top: 1px solid var(--line);
   box-shadow: 0 -4px 24px rgba(16, 24, 40, .08);
   padding: 1.25rem;
+}
+
+.cookie-banner {
+  max-width: var(--max);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.cookie-banner__text p { margin: 0; font-size: .85rem; color: var(--ink-soft); max-width: 70ch; }
+.cookie-banner__text strong { color: var(--ink); }
+.cookie-banner__actions { display: flex; gap: .75rem; flex-shrink: 0; }
+
+/* I due pulsanti sono IDENTICI per dimensione, colore, peso e bordo.
+   Rifiutare deve costare esattamente quanto accettare: nessun "Rifiuta"
+   grigio e piccolo. È una scelta etica, ed è anche ciò che chiede il GDPR,
+   perché un consenso ottenuto con un pulsante più invitante non è libero. */
+.cookie-banner__btn {
+  font: inherit;
+  font-weight: 650;
+  font-size: .9rem;
+  padding: .6rem 1.25rem;
+  min-width: 160px;
+  border: 1px solid var(--brand);
+  border-radius: 10px;
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+}
+.cookie-banner__btn:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
+
+/* Con il banner aperto lascio spazio in fondo e alzo il messaggino di
+   conferma, così non si sovrappongono. */
+body.has-cookie-banner { padding-bottom: 150px; }
+body.has-cookie-banner #toast { bottom: 170px; }
+
+@media (max-width: 760px) {
+  .cookie-banner__actions { width: 100%; }
+  .cookie-banner__btn { flex: 1; min-width: 0; }
+  body.has-cookie-banner { padding-bottom: 230px; }
+  body.has-cookie-banner #toast { bottom: 250px; }
 }
 
 /* --------------------------------------------------------------------------
