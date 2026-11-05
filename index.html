@@ -127,13 +127,38 @@ document.addEventListener('DOMContentLoaded', function () {
      Non è un evento e-commerce, quindi nessun ecommerce: null.
      Trattengo il link un istante così il push avviene PRIMA del cambio pagina.
      cta_text lo leggo dal pulsante stesso: se un giorno l'etichetta cambia,
-     l'evento resta allineato a quello che l'utente ha davvero letto. */
+     l'evento resta allineato a quello che l'utente ha davvero letto.
+
+     REGOLA DI FONDO: il tracciamento non deve mai rompere il sito. Un errore
+     nella misurazione fa perdere un dato, un link bloccato fa perdere il
+     cliente. Perciò la navigazione sta FUORI dal try. */
   document.addEventListener('click', function (event) {
     var cta = event.target.closest('[data-cta]');
     if (!cta) return;
+
+    var destinazione = cta.getAttribute('href');
+    /* Senza una destinazione valida non interferisco col comportamento normale. */
+    if (!destinazione) return;
+
+    /* Clic che non è una navigazione semplice (Cmd/Ctrl per aprire in una
+       nuova scheda, tasto centrale, clic già gestito da altri): lascio fare
+       al browser e non trattengo nulla. */
+    if (event.defaultPrevented || event.button !== 0 ||
+        event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
     event.preventDefault();
-    DL.ctaClick(cta.textContent.trim(), cta.getAttribute('data-cta-location'));
-    window.location.href = cta.getAttribute('href');
+
+    /* Qualunque cosa vada storta qui dentro — datalayer.js non caricato,
+       DL inesistente, dataLayer sovrascritto da un'estensione, blocco degli
+       script pubblicitari — viene annotata e ignorata. */
+    try {
+      DL.ctaClick(cta.textContent.trim(), cta.getAttribute('data-cta-location'));
+    } catch (errore) {
+      if (window.console) console.warn('[dataLayer] cta_click non inviato:', errore);
+    }
+
+    /* Fuori dal try: viene eseguita sia che il push sia riuscito sia che no. */
+    window.location.href = destinazione;
   });
 });
 </script>

@@ -133,6 +133,12 @@ Due dettagli di attuazione:
 - il link viene trattenuto un istante perché il push avvenga **prima** del cambio pagina.
   Il pulsante è marcato nell'HTML con `data-cta` e `data-cta-location`: aggiungere altri
   pulsanti tracciati non richiede nuovo JavaScript, bastano i due attributi.
+- **il tracciamento non può rompere il link**: la chiamata al dataLayer sta dentro un
+  `try/catch` e la navigazione sta fuori, quindi avviene anche se il push va in errore
+  (script di misurazione bloccato, `dataLayer` sovrascritto da un'estensione, file non
+  caricato). Un errore di misurazione fa perdere un dato; un link bloccato fa perdere il
+  cliente. Il `Cmd`/`Ctrl`+clic e il tasto centrale restano gestiti dal browser, così
+  l'apertura in una nuova scheda continua a funzionare.
 
 ### Scelte di misurazione
 
