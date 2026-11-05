@@ -196,6 +196,32 @@ var DL = (function () {
     push('purchase', ecommerce);
   }
 
+  /* ---------- eventi personalizzati (fuori dalle specifiche ecommerce) ----------
+     Questi eventi non riempiono l'oggetto "ecommerce", quindi NON serve
+     azzerarlo: il push di { ecommerce: null } esiste solo per ripulire dati di
+     prodotto rimasti in memoria, e qui non ce ne sono. I parametri stanno al
+     primo livello del push, non dentro un oggetto annidato.
+     In GTM vanno letti con variabili Data Layer dedicate (una per parametro). */
+
+  /* Push di un evento personalizzato: nessun azzeramento, parametri in piano. */
+  function pushCustom(payload) {
+    window.dataLayer.push(payload);
+    if (VOLTARIA_DEBUG && window.console) {
+      console.log('[dataLayer] ' + payload.event, payload);
+    }
+  }
+
+  /* Clic su un pulsante di invito all'azione.
+     testo     -> cta_text, l'etichetta letta dal pulsante stesso
+     posizione -> cta_location, dove si trova il pulsante nella pagina */
+  function ctaClick(testo, posizione) {
+    pushCustom({
+      event: 'cta_click',
+      cta_text: testo,
+      cta_location: posizione
+    });
+  }
+
   /* Reso pubblico solo ciò che le pagine devono poter chiamare. */
   return {
     viewItemList: viewItemList,
@@ -207,6 +233,7 @@ var DL = (function () {
     beginCheckout: beginCheckout,
     addShippingInfo: addShippingInfo,
     addPaymentInfo: addPaymentInfo,
-    purchase: purchase
+    purchase: purchase,
+    ctaClick: ctaClick
   };
 })();

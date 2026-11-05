@@ -88,7 +88,7 @@ dataLayer.push({
 });
 ```
 
-### Elenco degli eventi
+### Elenco degli eventi e-commerce
 
 | # | Evento | Dove parte | Quando | Parametri oltre a `items` |
 |---|---|---|---|---|
@@ -106,6 +106,33 @@ dataLayer.push({
 Parametri dentro `items`: `item_id`, `item_name`, `affiliation`, `item_brand`,
 `item_category`, `item_variant`, `price`, `quantity` e, negli elenchi, `index`,
 `item_list_id`, `item_list_name`.
+
+### Eventi personalizzati
+
+Eventi fuori dalle specifiche e-commerce, per misurare l'interazione con la pagina.
+Non riempiono l'oggetto `ecommerce`, quindi **non** sono preceduti da `ecommerce: null`:
+quell'azzeramento serve solo a ripulire dati di prodotto rimasti in memoria, e qui non ce
+ne sono. I parametri stanno al primo livello del push, non dentro un oggetto annidato.
+
+| Evento | Dove parte | Quando | Parametri |
+|---|---|---|---|
+| `cta_click` | `index.html` | clic sul pulsante "Vedi il catalogo" nell'intestazione | `cta_text`, `cta_location` |
+
+```js
+dataLayer.push({
+  event: 'cta_click',
+  cta_text: 'Vedi il catalogo',
+  cta_location: 'home_hero'
+});
+```
+
+Due dettagli di attuazione:
+
+- `cta_text` viene letto dal pulsante stesso. Se un giorno l'etichetta cambia, l'evento
+  resta allineato a quello che l'utente ha davvero letto, senza interventi sul codice.
+- il link viene trattenuto un istante perché il push avvenga **prima** del cambio pagina.
+  Il pulsante è marcato nell'HTML con `data-cta` e `data-cta-location`: aggiungere altri
+  pulsanti tracciati non richiede nuovo JavaScript, bastano i due attributi.
 
 ### Scelte di misurazione
 
@@ -131,10 +158,13 @@ Parametri dentro `items`: `item_id`, `item_name`, `affiliation`, `item_brand`,
 1. Contenitore collegato: `GTM-K27GBKKM`, già inserito nel `<head>` e nel
    `<noscript>` di tutte e 6 le pagine.
 2. Variabile **Data Layer** di nome `ecommerce`, versione 2.
-3. Un trigger **Evento personalizzato** per ciascuno dei 10 nomi della tabella.
+3. Un trigger **Evento personalizzato** per ciascuno dei 10 eventi e-commerce.
 4. Tag **GA4 Event** per ogni evento, con l'opzione "Invia dati e-commerce" impostata su
    *Data Layer*.
 5. Tag di configurazione GA4 attivato su "Inizializzazione consenso" o "All Pages".
+6. Per `cta_click`: due variabili **Data Layer** (`cta_text` e `cta_location`), un trigger
+   **Evento personalizzato** sul nome `cta_click` e un tag **GA4 Event** che invia i due
+   parametri. Qui l'opzione dei dati e-commerce va lasciata **disattivata**.
 
 Per vedere i push nella console del browser: apri gli strumenti per sviluppatori, scrivi
 `VOLTARIA_DEBUG = true` e naviga nel sito. Oppure scrivi `dataLayer` per vedere l'array.

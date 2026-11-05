@@ -59,7 +59,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <h1>Tecnologia che non esiste, tracciamento che funziona</h1>
       <p>Voltaria &egrave; un negozio inventato da zero per mostrare un impianto di misurazione
          completo: dataLayer secondo le specifiche GA4 Ecommerce e Google Tag Manager.</p>
-      <p><a class="btn btn--light" href="categoria.html">Vedi il catalogo</a></p>
+      <!-- data-cta segna il pulsante da tracciare, data-cta-location dice dove sta. -->
+      <p><a class="btn btn--light" href="categoria.html"
+            data-cta data-cta-location="home_hero">Vedi il catalogo</a></p>
     </section>
 
     <section class="section">
@@ -120,6 +122,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
   renderProductList(document.getElementById('vetrina'), vetrina, LIST_ID, LIST_NAME);
   DL.viewItemList(LIST_ID, LIST_NAME, vetrina);
+
+  /* Pulsante di invito all'azione: evento personalizzato cta_click.
+     Non è un evento e-commerce, quindi nessun ecommerce: null.
+     Trattengo il link un istante così il push avviene PRIMA del cambio pagina.
+     cta_text lo leggo dal pulsante stesso: se un giorno l'etichetta cambia,
+     l'evento resta allineato a quello che l'utente ha davvero letto. */
+  document.addEventListener('click', function (event) {
+    var cta = event.target.closest('[data-cta]');
+    if (!cta) return;
+    event.preventDefault();
+    DL.ctaClick(cta.textContent.trim(), cta.getAttribute('data-cta-location'));
+    window.location.href = cta.getAttribute('href');
+  });
 });
 </script>
 
