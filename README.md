@@ -21,7 +21,7 @@ tramite **Google Tag Manager**.
 | Banner cookie + Consent Mode | analista | spazio predisposto |
 
 GA4 **non** è installato nel codice: nelle pagine c'è solo lo snippet di Google Tag Manager
-con l'ID segnaposto `GTM-XXXXXXX`. Ogni tag va creato dentro il contenitore.
+con l'ID del contenitore `GTM-K27GBKKM`. Ogni tag va creato dentro il contenitore.
 
 ---
 
@@ -128,8 +128,8 @@ Parametri dentro `items`: `item_id`, `item_name`, `affiliation`, `item_brand`,
 
 ## Cosa configurare in Google Tag Manager
 
-1. Sostituire `GTM-XXXXXXX` con l'ID del contenitore in tutte le pagine
-   (`<head>` e `<noscript>` di ciascun file HTML).
+1. Contenitore collegato: `GTM-K27GBKKM`, già inserito nel `<head>` e nel
+   `<noscript>` di tutte e 6 le pagine.
 2. Variabile **Data Layer** di nome `ecommerce`, versione 2.
 3. Un trigger **Evento personalizzato** per ciascuno dei 10 nomi della tabella.
 4. Tag **GA4 Event** per ogni evento, con l'opzione "Invia dati e-commerce" impostata su
