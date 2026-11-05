@@ -106,6 +106,9 @@ body { padding-top: 44px; }
 }
 .site-nav a:hover { color: var(--ink); }
 .site-nav a.is-current { color: var(--brand); border-bottom-color: var(--brand); }
+/* L'attributo hidden del contatore deve vincere sul display della classe,
+   altrimenti il carrello vuoto mostra uno "0" inutile. */
+.cart-badge[hidden] { display: none; }
 .cart-badge {
   display: inline-grid; place-items: center;
   min-width: 20px; height: 20px;
@@ -276,8 +279,20 @@ main { padding: 2.5rem 0 4rem; }
 }
 .steps li.is-active { border-color: var(--brand); color: var(--brand); background: #eef1ff; }
 .steps li.is-done { color: var(--accent); border-color: var(--accent); }
-.steps li span { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: .5rem; border-radius: 999px; background: currentColor; color: #fff; font-size: .75rem; }
-.steps li.is-active span, .steps li.is-done span { color: #fff; }
+/* Sfondo esplicito: con "background: currentColor" accanto a "color: #fff"
+   il cerchio diventava bianco su bianco e il numero spariva. */
+.steps li span {
+  display: inline-grid; place-items: center;
+  width: 22px; height: 22px;
+  margin-right: .5rem;
+  border-radius: 999px;
+  background: var(--ink-soft);
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 700;
+}
+.steps li.is-active span { background: var(--brand); }
+.steps li.is-done span { background: var(--accent); }
 
 .field { margin-bottom: 1rem; }
 .field label { display: block; font-size: .85rem; font-weight: 650; margin-bottom: .3rem; }
